@@ -30,11 +30,13 @@ const saveHistory = () => fs.promises.writeFile(historyPath, JSON.stringify({
     receive: messageQueue.queue.filter(e => e.event === 'receive').filter(e => e.data.type !== 'file' || e.data.expire > Date.now() / 1e3).map(e => e.data),
 }));
 
-const router = new KoaRouter;
+const router = new KoaRouter({
+    prefix: config.server.prefix,
+});
 
 router.get('/server', async ctx => {
     ctx.body = {
-        'server': `ws${(config.server.forceWss || ctx.request.protocol === 'https') ? 's' : ''}://${ctx.request.host}/push`,
+        'server': `ws://${ctx.request.host}${config.server.prefix}/push`,
         'auth': !!config.server.auth,
     };
 });
@@ -42,7 +44,11 @@ router.get('/server', async ctx => {
 router.post(
     '/text',
     koaBody({
-        enableTypes: ['text'],
+        multipart: false,
+        urlencoded: false,
+        text: true,
+        json: false,
+        textLimit: 1048576,
     }),
     async ctx => {
         /** @type {String} */
@@ -189,7 +195,7 @@ router.get('/file/:uuid([0-9a-f]{32})', async ctx => {
     ctx.attachment(file.name, {type: 'inline'});
     const fileSize = (await fs.promises.stat(file.path)).size;
     // https://github.com/xtx1130/koa-partial-content/blob/master/index.js
-    if (file.name.match(/\.(mp3|mp4|flv|webm|ogv|mpg|mpg|wav|ogg|opus|m4a)$/gi)) {
+    if (ctx.header.range && file.name.match(/\.(mp3|mp4|flv|webm|ogv|mpg|mpg|wav|ogg|opus|m4a|flac)$/gi)) {
         try {
             const m = /^bytes=(\d+)-(\d*)$/.exec(ctx.request.header.range || 'bytes=0-');
             if (!m) throw new Error;

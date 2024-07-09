@@ -11,9 +11,10 @@ if (!process.argv[2] && !fs.existsSync(defaultConfigPath)) {
         server: {
             host: [],
             port: 9501,
+            uds: null,
+            prefix: '',
             key: null,
             cert: null,
-            forceWss: false,
             history: 10,
             auth: false,
         },
@@ -32,7 +33,9 @@ if (!process.argv[2] && !fs.existsSync(defaultConfigPath)) {
  * @type {{
  *  server: {
  *      host: String | String[],
- *      port: Number,
+ *      port: [Number],
+ *      uds: [String],
+ *      prefix: [String],
  *      key: [String],
  *      cert: [String],
  *      forceWss: [Boolean],
@@ -51,6 +54,9 @@ if (!process.argv[2] && !fs.existsSync(defaultConfigPath)) {
  */
 const config = JSON.parse(fs.readFileSync(process.argv[2] || defaultConfigPath));
 
+if (!config.server.prefix) {
+    config.server.prefix = '';
+}
 if (config.server.auth === true) {
     config.server.auth = '';
     for (let i = 0; i < 6; i++) {

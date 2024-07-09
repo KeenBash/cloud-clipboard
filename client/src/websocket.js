@@ -49,12 +49,13 @@ export default {
                 dismissable: false,
                 timeout: 0,
             });
-            this.$http.get('/server').then(response => {
+            this.$http.get('server').then(response => {
                 if (this.authCode) localStorage.setItem('auth', this.authCode);
                 this.room = this.room.trim();
                 localStorage.setItem('room', this.room);
                 return new Promise((resolve, reject) => {
                     const wsUrl = new URL(response.data.server);
+                    wsUrl.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
                     if (response.data.auth) {
                         if (this.authCode) {
                             wsUrl.searchParams.set('auth', this.authCode);
@@ -73,7 +74,7 @@ export default {
                 this.retry = 0;
                 this.received = [];
                 this.$toast('连接服务器成功');
-                setInterval(() => {ws.send('')}, 60000);
+                setInterval(() => {ws.send('')}, 30000);
                 ws.onclose = () => {this.failure()};
                 ws.onmessage = e => {
                     try {

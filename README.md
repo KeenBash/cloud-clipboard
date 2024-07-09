@@ -8,7 +8,15 @@
 * 前端使用 [Vue 2](https://cn.vuejs.org) 和 [Vuetify](https://vuetifyjs.com/zh-Hans/) 构建
 * 后端使用 ~~[Swoole](https://www.swoole.com) 或~~ [Node.js](https://nodejs.org) ([Koa](https://github.com/koajs/koa)) 构建 ~~（两种服务端实现任选一种即可）~~
 
-*由于这个项目是针对个人在连接到同一局域网（比如家里的路由器）的设备之间使用而设计的，因此并没有额外考虑在公开的服务器上使用时可能面对的技术和安全问题。*
+> [!TIP]
+>
+> 我在 https://try-clipboard.akarin.dev/ 部署了一个公用实例，你可以自由体验使用。
+>
+> 一些设定和限制：
+>
+> * 历史记录上限 50 条，文本长度限制为 4096，文件大小限制为 64 MB，文件过期时间一小时。
+> * 提交的内容是公开的，所以请不要上传隐私信息（你可能需要使用右上角的“房间”功能）。
+> * 请不要通过刷屏、垃圾广告等方式恶意影响其他人正常使用。如果出现了恶意的使用行为，我可能会选择关停公用实例。
 
 test
 
@@ -69,22 +77,37 @@ node main.js
 
 服务端默认会监听本机所有网卡的 IP 地址（也可以自己设定），并在终端中显示前端界面所在的网址，使用浏览器打开即可使用。
 
-如果你使用的是 Node.js 17 或以上的版本，构建前端资源时可能会遇到 `Error: error:0308010C:digital envelope routines::unsupported` 的错误，在终端里设置环境变量 `NODE_OPTIONS=--openssl-legacy-provider` 可以解决这个问题。
+#### 使用 Docker 运行
 
-### Docker
-#### 自己打包
+##### 自己打包
+
 ```bash
 docker image build -t myclip .
 docker container run -d -p 9501:9501 myclip
 ```
 
-#### 从docker hub拉取
+##### 从 Docker Hub 拉取
+
+> [!TIP]
+> Docker Hub 上的镜像是由他人打包的，仅为方便使用而在这里给出，版本可能会滞后于 repo 内的源代码。
+>
+> 如果你在使用时遇到了问题，请先确认这是本项目本身（而不是某个 Docker 镜像）的问题。
+
+> [!WARNING]
+> [csmayi/lan-clip](https://hub.docker.com/r/csmayi/lan-clip) 打包的版本无法使用反向代理，在我[修复](https://github.com/TransparentLC/cloud-clipboard/commit/39ba010f0ac721337842be4668fce693f4587a95)之后并没有同步更新，目前不建议使用。
+
 ```bash
-docker pull csmayi/lan-clip:latest
-docker container run -d -p 9501:9501 csmayi/lan-clip
+docker pull chenqiyux/lan-clip:latest
+docker container run -d -p 9501:9501 chenqiyux/lan-clip
 ```
 
 访问 [clipboard](http://127.0.0.1:9501)
+
+### C 版服务端
+
+[@xfangfang](https://github.com/xfangfang) 使用 C 实现了一个服务端（目前只实现了部分功能）。如果你有在其他平台上运行的需求，可以尝试使用。
+
+https://github.com/xfangfang/cloud-clipboard/tree/c/server-c
 
 ### Swoole 版服务端
 
@@ -145,15 +168,16 @@ php build-phar.php
 ```json
 {
     "server": {
-        // 监听的 IP 地址，省略或设为null则会监听所有网卡的IP地址
+        // 监听的 IP 地址，省略或设为 null 则会监听所有网卡的IP地址
         "host": [
             "127.0.0.1",
             "::1"
         ],
-        "port": 9501, // 端口号
+        "port": 9501, // 端口号，falsy 值表示不监听
+        "uds": "/var/run/cloud-clipboard.sock", // UNIX domain socket 路径，可以后接“:666”设定权限（默认666），falsy 值表示不监听
+        "prefix": "", // 部署时的URL前缀，例如想要在 http://localhost/prefix/ 访问，则将这一项设为 /prefix
         "key": "localhost-key.pem", // HTTPS 私钥路径
         "cert": "localhost.pem", // HTTPS 证书路径
-        "forceWss": false, // 如果没有设定以上两项，但是通过 Nginx 等反向代理而使用了 HTTPS，则需要设为 true 让前端界面强制使用 WSS 连接
         "history": 10, // 消息历史记录的数量
         "auth": false // 是否在连接时要求使用密码认证，falsy 值表示不使用
     },
@@ -171,6 +195,7 @@ php build-phar.php
 >
 > 如果同时设定了私钥和证书路径，则会使用 HTTPS 协议访问前端界面，未设定则会使用 HTTP 协议。
 > 自用的话，可以使用 [mkcert](https://mkcert.dev/) 自行生成证书，并将根证书添加到系统/浏览器的信任列表中。
+> 如果使用了 Nginx 等软件的反向代理，且这些软件已经提供了 HTTPS 连接，则无需在这里设定。
 >
 > “密码认证”的说明：
 >
